@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# chkconfig: 2345 95 05
+# description: MyApp
+# pidfile: /var/run/myapp.pid
+# processname: coffee
+#
+
+# Configuration Options
+NAME="myapp"
+DAEMON="sudo -u <%= @user %> java $JAVA_OPTS -jar <%= @deploy_root %>/<%= @deployable %>.jar"
+
+#
+# Do not modify below this line
+#
+PIDFILE="/var/run/$NAME.pid"
+SCRIPTNAME=$0
+
+startup() {
+    printf "%-50s" "Starting $NAME..."
+        
+    if [ -e $PIDFILE ] ; then
+        printf "\r\n"
+        echo "$NAME appears to be running already.  If this is not correct remove $PIDFILE" >&2
+        exit 1
+    fi
+    OLD_DIR=$(pwd)
+    cd <%= @deploy_root %>
+    umask 0022
+    eval "$DAEMON > <%= @log_dir %>/$NAME.log 2>&1 &"
+    sleep 5 # allow sudo time to fork
+    PID=$(pgrep -f $NAME -u <%= @user %>)
+    if [ -z $PID ]; then
+        printf "%s\n" "Fail"
+    else
+        echo $PID > $PIDFILE
+        printf "%s\n" "Ok"
+    fi
+    cd $OLD_DIR
+}
+
+case "$1" in
+start)
+	userdata=$(curl http://169.254.169.254/latest/user-data)
+	echo "Instance userdata: $userdata"
+	if [ "$userdata" == "$NAME" ]; then
+		startup
+	else
+		echo "Not starting due to lack of AWS userdata (use force-start to override)"
+	fi
+;;
+force-start)
+	startup
+;;
+status)
+    printf "%-50s" "Checking $NAME..."
+    if [ -f $PIDFILE ]; then
+        PID=`cat $PIDFILE`
+        if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
+            printf "%s\n" "Process dead but pidfile exists ($PIDFILE)"
+        else
+            echo "Running"
+        fi
+    else
+        printf "%s\n" "Service not running"
+    fi
+;;
+stop)
+    if [ ! -e $PIDFILE ] ; then
+        printf "\r\n"
+        echo "$NAME does not appear to be running." >&2
+        exit 1
+    fi
+    
+    printf "%-50s" "Stopping $NAME"
+    
+    PID=`cat $PIDFILE`
+    kill -KILL $PID
+                printf "%s\n" "Ok"
+    rm -f $PIDFILE
+;;
+
+restart)
+        $0 stop
+        $0 start
+;;
+
+*)
+        echo "Usage: $0 {status|start|stop|restart|force-start}"
+        exit 1
+esac

@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Group-Id: org.jenkins-ci.plugins
+Short-Name: kitchen-status
+Long-Name: kitchen-status
+Url: http://jenkins-ci.org/plugin/kitchen-status/
+Plugin-Version: 1.0-SNAPSHOT (private-06/16/2014 11:59-jippolito)
+Hudson-Version: 1.557
+Jenkins-Version: 1.557
+Plugin-Developers: 
+Libraries: /Users/jippolito/jenkins-plugins/kitchen-status/target/clas
+ ses,/Users/jippolito/.m2/repository/junit/junit/4.10/junit-4.10.jar,/
+ Users/jippolito/.m2/repository/com/googlecode/json-simple/json-simple
+ /1.1.1/json-simple-1.1.1.jar,/Users/jippolito/.m2/repository/commons-
+ logging/commons-logging/1.1.3/commons-logging-1.1.3.jar,/Users/jippol
+ ito/.m2/repository/org/apache/httpcomponents/httpclient/4.3.4/httpcli
+ ent-4.3.4.jar,/Users/jippolito/.m2/repository/commons-codec/commons-c
+ odec/1.6/commons-codec-1.6.jar,/Users/jippolito/.m2/repository/org/ap
+ ache/httpcomponents/httpcore/4.3.2/httpcore-4.3.2.jar,/Users/jippolit
+ o/.m2/repository/org/hamcrest/hamcrest-core/1.1/hamcrest-core-1.1.jar
+Resource-Path: /Users/jippolito/jenkins-plugins/kitchen-status/src/mai
+ n/webapp
+
