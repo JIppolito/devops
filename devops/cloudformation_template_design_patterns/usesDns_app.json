@@ -1,0 +1,63 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Description" : "Defines the full stack for the MyApp Services",
+    "Parameters": {
+        "TemplateRevision": {
+            "Description": "The revision number of the sub stack template uploaded to S3.",
+            "Type": "String"
+        },
+        "AMI" : {
+            "Description": "AMI created by Packer job",
+            "Type": "String",
+            "Default" : "ami-c2100aaa"
+        },
+        "GITCOMMIT" : {
+            "Description": "Git Commit Associated with this Stack",
+            "Type": "String",
+            "Default" : "1"
+        },
+        "GITBRANCH" : {
+            "Description": "Git Branch Associated with this stack",
+            "Type": "String",
+            "Default" : "dev"
+        }
+    },
+    
+    "Conditions" : {
+    	"UseProdCondition" : {
+        	"Fn::Equals": [ {"Ref": "GITBRANCH"}, "master" ]
+        }
+    },
+    
+    "Resources" : {
+        "MyApp": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Metadata" : {
+                "Comment" : "My App Stack",
+                "Team" : "ATeam",
+                "Project" : "AppServices",
+                "Version" : "0.0.1",
+                "GitCommit" :  { "Ref" : "GITCOMMIT"}
+            },
+            "Properties": {
+                "Parameters": {
+                    "AMI": { "Ref" : "AMI"},
+                    "FriendlyName": "myapp",
+                    "SecurityGroup": "sg-8e06a7eb",
+                    "ServiceName": "app_services",
+                    "ProjectBaseURL": "myapp.somedomain.com",
+                    "BranchName": { "Ref" : "GITBRANCH"},
+                    "UsesELB": false,
+                    "UsesDNS": true
+                },
+                "TemplateURL": { "Fn::Join": ["", ["https://s3.amazonaws.com/cf-templates/usesDNS_container-", { "Ref": "TemplateRevision" }, ".json"] ] }
+            }
+        }
+        },
+    "Outputs": {
+        "TestEndpoint": {
+            "Description": "The logical endpoint that integration and/or systems tests should hit.",
+            "Value": { "Fn::Join": ["", ["http://", { "Fn::GetAtt": [ "MyApp", "Outputs.DNSName" ] } ] ] }
+        }
+    }
+}

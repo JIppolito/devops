@@ -1,0 +1,264 @@
+{
+	"AWSTemplateFormatVersion" : "2010-09-09",
+	"Description" : "Defines a container environment for a MyApp Stack",
+	"Conditions": {
+		"MakeELB": { "Fn::Equals": [{"Ref": "UsesELB"}, "true"] },
+		"NoMakeELB": { "Fn::Equals": [{"Ref": "UsesELB"}, "false"] },
+        "MakeDNS": { "Fn::Equals": [{"Ref": "UsesDNS"}, "true"] },
+        "MakeProdDNS": { "Fn::Equals": [{"Ref": "UsesProdDNS"}, "true"] }
+	},
+	"Mappings": {
+		"AZtoSubnet": {
+			"us-east-1b": { "Value": "subnet-add89185" },
+			"us-east-1c": { "Value": "subnet-9b5231ec" },
+			"us-east-1d": { "Value": "subnet-650bb23c" }
+		}
+	},
+	"Parameters": {
+		"AMI": {
+			"Description": "Packer image generated for this build.",
+			"Type": "String"
+		},
+		"AZ": {
+			"Default": "us-east-1d",
+			"Description": "Availablility zone to deploy into.",
+			"Type": "String"
+		},
+		"FriendlyName": {
+			"Description": "The name of the service used for DNS and tags.",
+			"Type": "String"
+		},
+		"ExternalSecurityGroup": {
+			"Default": "sg-8e06a7eb",
+			"Description": "Security group to define user access to the stack.",
+			"Type": "String"
+		},
+		"Instances": {
+			"Default": "3",
+			"Description": "Number of instances in the associated auto-scale group.",
+			"Type": "String"
+		},
+		"InstanceType": {
+			"Default": "t2.medium",
+			"Description": "The EC2 instance type to launch.",
+			"Type": "String"
+		},
+		"MaxInstances": {
+			"Default": "10",
+			"Description": "Maximum number of instances in the auto-scale group during new builds.",
+			"Type": "String"
+		},
+		"SecurityGroup": {
+			"Description": "Security group defined by the full stack.",
+			"Type": "String"
+		},
+		"ServiceName": {
+			"Description": "The name of the service deployed into the container, as propagated to userdata.",
+			"Type": "String"
+		},
+		"BranchName": {
+			"Description": "The name of the specific branch from the git repository for this service",
+			"Type": "String"
+		},
+		"ProjectBaseURL": {
+			"Description": "The base URL of the service being deployed.",
+			"Type": "String"
+		},
+		"UsesELB": {
+			"AllowedValues": ["true", "false"],
+			"Default": "true",
+			"Description": "Whether or not to create an ELB for the launch configuration.",
+			"Type": "String"
+		},
+		"UsesDNS": {
+			"AllowedValues": ["true", "false"],
+			"Default": "true",
+			"Description": "Whether or not to create DNS for the instance or ELB.",
+			"Type": "String"
+        },
+        "UsesProdDNS": {
+            "AllowedValues": ["true", "false"],
+            "Default": "false",
+            "Description": "Whether or not to create DNS for the instance or ELB.",
+            "Type": "String"
+        }
+	},
+	"Resources" : {
+		"ELB" : {
+			"Condition": "MakeELB",
+			"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+			"Properties" : {
+				"Listeners" : [{
+						"LoadBalancerPort" : "443",
+						"InstancePort" : "3000",
+						"Protocol" : "TCP"
+					}
+				],
+				"HealthCheck" : {
+					"Target" : "TCP:3000",
+					"HealthyThreshold" : "2",
+					"UnhealthyThreshold" : "5",
+					"Interval" : "10",
+					"Timeout" : "5"
+				},
+				"Scheme": "internal",
+				"SecurityGroups": [ { "Ref": "ExternalSecurityGroup" } ],
+				"Subnets": [ { "Fn::FindInMap": [ "AZtoSubnet", { "Ref": "AZ" }, "Value"] } ]
+			}
+		},
+		"LaunchConfig" : {
+			"Type" : "AWS::AutoScaling::LaunchConfiguration",
+			"Properties" : {
+				"ImageId" : { "Ref": "AMI" },
+				"InstanceType" : { "Ref": "InstanceType" },
+				"SecurityGroups" : [{
+						"Ref" : "SecurityGroup"
+					}],
+                "IamInstanceProfile": {
+                    "Ref": "InterconnectInstanceProfile"
+                },
+				"UserData" : {
+					"Fn::Base64" : { "Ref": "ServiceName" }
+				}
+			}
+		},
+		"ELBASG" : {
+			"Condition": "MakeELB",
+			"Type" : "AWS::AutoScaling::AutoScalingGroup",
+			"Properties" : {
+				"AvailabilityZones" : [{ "Ref": "AZ"}],
+				"HealthCheckGracePeriod": 180,
+				"LaunchConfigurationName" : {
+					"Ref" : "LaunchConfig"
+				},
+				"MinSize" : { "Ref": "Instances" },
+				"MaxSize" : { "Ref": "MaxInstances" },
+				"HealthCheckType" : "ELB",
+				"LoadBalancerNames" : [{
+						"Ref" : "ELB"
+					}
+				],
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": { "Fn::Join" : ["-", ["interconnectASG", { "Ref": "FriendlyName" }]] },
+						"PropagateAtLaunch": true
+					}
+				],
+				"VPCZoneIdentifier": [{ "Fn::FindInMap": [ "AZtoSubnet", { "Ref": "AZ" }, "Value"] }]
+			},
+			"UpdatePolicy": { "AutoScalingRollingUpdate": {
+			"MaxBatchSize": 1,
+			"MinInstancesInService": 0,
+				"PauseTime": "PT0S",
+				"WaitOnResourceSignals": false
+                }
+            }
+        },
+        "DNS" : {
+        	"Condition": "MakeDNS",
+            "Type" : "AWS::Route53::RecordSetGroup",
+            "Properties" : {
+            	"HostedZoneName" : { "Fn::Join" : [".", [{ "Ref": "ProjectBaseURL"}, ""]]},
+                	"RecordSets" : [{
+                                    "Name" : { "Fn::Join" : [".", [{ "Ref": "FriendlyName" }, { "Ref": "BranchName" }, { "Ref": "ProjectBaseURL" }]]},
+                                    "Type" : "A",
+                                    "AliasTarget" : {
+                                        "HostedZoneId" : {
+                                            "Fn::GetAtt" : ["ELB", "CanonicalHostedZoneNameID"]
+                                        },
+                                        "DNSName" : {
+                                            "Fn::GetAtt" : ["ELB", "DNSName"]
+                                        }
+                                    }
+                    }]
+        	}
+        },
+        "ExternalDNS" : {
+            "Condition": "MakeProdDNS",
+            "Type" : "AWS::Route53::RecordSetGroup",
+            "Properties" : {
+                "HostedZoneName" : { "Fn::Join" : [".", [{ "Ref": "ProjectBaseURL"}, ""]]},
+                "RecordSets" : [{
+                                "Name" : { "Fn::Join" : [".", [ "myapp" , { "Ref": "ProjectBaseURL" }]] },
+                                "Type" : "A",
+                                "AliasTarget" : {
+                                "HostedZoneId" : {
+                                "Fn::GetAtt" : ["ELB", "CanonicalHostedZoneNameID"]
+                                },
+                                "DNSName" : {
+                                "Fn::GetAtt" : ["ELB", "DNSName"]
+                                }
+                                }
+                                }]
+            }
+        },
+        "MyAppRole": {
+        	"Type": "AWS::IAM::Role",
+            "Properties": {
+            	"AssumeRolePolicyDocument": {
+                	"Statement": [
+                              {
+                              "Effect": "Allow",
+                              "Principal": {
+                              "Service": [
+                                          "ec2.amazonaws.com"
+                                          ]
+                              },
+                              "Action": [
+                                         "sts:AssumeRole"
+                                         ]
+                              }
+                              ]
+            },
+            "Path": "/"
+        }
+    },
+    	"RolePolicies": {
+        "Type": "AWS::IAM::Policy",
+        "Properties": {
+            "PolicyName": "myapppolicy",
+            "PolicyDocument": {
+                "Statement": [
+                              {
+                              "Effect": "Allow",
+                              "Action": [
+                                         "sqs:*",
+                                         "sns:*",
+                                         "iam:*",
+                                         "dynamodb:*"
+                                         ],
+                              "Resource": "*"
+                              }
+                              ]
+            },
+            "Roles": [
+                      {
+                      "Ref": "MyAppRole"
+                      }
+                      ]
+        }
+    },
+    	"MyAppInstanceProfile": {
+       		"Type": "AWS::IAM::InstanceProfile",
+       		"Properties": {
+           		"Path": "/",
+           		"Roles": [
+                     {
+                     "Ref": "MyAppRole"
+                     }
+                     ]
+      	 	}
+    	}
+    },
+	"Outputs": {
+		"DNSName": {
+			"Description": "DNS name referring to this sub-stack.",
+			"Value":  { "Fn::Join" : [".", [{ "Ref": "FriendlyName" }, { "Ref": "BranchName" }, { "Ref": "ProjectBaseURL" }]]}
+		},
+        "ASGName" : {
+            "Description" : "ASG Name",
+            "Value" :  { "Ref" : "ELBASG" }
+        }
+	}
+}
