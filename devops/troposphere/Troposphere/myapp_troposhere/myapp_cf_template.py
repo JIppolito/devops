@@ -13,197 +13,104 @@ from troposphere.policies import UpdatePolicy, AutoScalingRollingUpdate
 from troposphere.route53 import RecordSet, RecordSetGroup, AliasTarget
 import troposphere.ec2 as ec2
 import troposphere.elasticloadbalancing as elb
-from enoc_troposhere.base_autoscalinggroup import BaseAsg
-from enoc_troposhere.base_loadbalancer import BaseELB
-from enoc_troposhere.base_dns import BaseDNS
 
+from base_autoscalinggroup import BaseAsg
+from base_loadbalancer import BaseELB
+from base_dns import BaseDNS
+import yaml
 
-# TODO Python Params to Pass In
 '''
+How to use this file
+    This file will be unique for each team and can call the enoc_* classes to build the template with
+    a template file that is the same name as this file that has the proper branch name appended.
+    enoc_cf_myapp_test.py
+    enoc_cf_myapp_master.yml
+    enoc_cf_myapp_staging.yml
+    etc.
+    The logic here should be to have the branch dictate which AWS Resources are built.
+'''
+
+'''
+Python Params to Pass into script:
 -branch
--elbListenerConfig File Location
--LaunchConfig File Location
--elbHealthCheckConfig File Location
--Region2Subnet File Location
--asgConfig File Location
+-config file location
+i.e. python enco_cf_myapp.py mybranch enoc_cf_myapp_mybranch.yml
 '''
-
-launchConfigName="LaunchConfig"
-mybranch="staging"
-elbName="elb"
-friendlyName="myapp"
-externalSecurityGroup="sg-somegroup"
-
-launchConfig={
-    'launchConfigName':'LaunchConfig',
-    'InstanceType': 't2.small',
-    'SecurityGroups':['sg-somegroup'],
-    'UserData': 'myapp''
-}
-
-elbListenerConfig={
-    'LoadBalancerPort': '443',
-    'InstancePort': '8888',
-    'Protocol': 'HTTPS',
-    'InstanceProtocol': 'HTTP',
-    'sslCert': 'myarnd:server-certificate/.myapp.company.com'
-}
-
-elbHealthCheckConfig={
-   'Target':"TCP:8888/",
-   'HealthyThreshold':"5",
-   'UnhealthyThreshold':"2",
-   'Interval':"20",
-   'Timeout':"15"
-}
-
-asgConfig={
-    'MinSize': '1',
-    'MaxSize': '1',
-    'DesiredCapactiy': '1',
-    'HealthCheckGracePeriod': '180',
-    'MaxBatchSize': '1',
-    'MinInstancesInService': '0',
-    'PauseTime': 'PT0S',
-    'WaitOnResourceSignals': 'False'
-}
-
-template = Template()
-template.add_description("Configures Stack for " + friendlyName)
-
-# TODO: Fix subnet and avail zones to be a better format
-subnet_list_prd=["subnet-eas1b", "subnet-east1c", "subnet-east1d"]
-az_list_prd= ["us-east-1b", "us-east-1c", "us-east-1d"]
-
-template.add_mapping('Region2SubnetDev', {
-    "us-east-1": {  "Subnet" : subnet_list_prd ,
-                    "AZ": az_list_prd
-}})
-
-subnet_list=[ "subnet-east1b", "subnet-east1c", "subnet-east1d" ]
-az_list=[ "us-east-1b", "us-east-1c", "us-east-1d"]
-
-template.add_mapping('Region2SubnetProd', {
-    "us-east-1": { "Subnet" : subnet_list,
-                    "AZ": az_list
-}})
+mybranch = "staging"
+config_file = "/Users/jippolito/PycharmProjects/Troposphere/enoc_troposphere/enoc_cf_myapp_master.yml"
 
 
-AMI = template.add_parameter(Parameter(
-    "AMI",
-    Type="String",
-    Default="ami-c2100aaa",
-    Description="Image generated for this build",
-))
+with open(config_file, 'r') as ymlfile:
+    cfg = yaml.load(ymlfile)
 
-Region = template.add_parameter(Parameter(
-    "Region",
-    Type="String",
-    Default="us-east-1",
-    Description="Region to deploy into.",
-))
+for stack in cfg:
+    print(cfg[stack])
 
-GITCOMMIT = template.add_parameter(Parameter(
-    "GITCOMMIT",
-    Type="String",
-    Default="1",
-    Description="The revision number of the sub stack template uploaded to S3",
-))
+    template = Template()
+    template.add_description("Configuration for Stack: " + cfg[stack]['Name'])
 
-GITBRANCH = template.add_parameter(Parameter(
-    "GITBRANCH",
-    Type="String",
-    Default="dev",
-    Description="The revision number of the sub stack template uploaded to S3.",
-))
+    # Create Parameters
+    params = cfg[stack]['Parameters']
+    for param in params:
+        template.add_parameter(Parameter(
+            cfg[stack]['Parameters'][param]['Name'],
+            Type=cfg[stack]['Parameters'][param]['Type'],
+            Default=cfg[stack]['Parameters'][param]['Default'],
+            Description=cfg[stack]['Parameters'][param]['Description']
+        ))
 
+    # Ensure AMI is a Parameter
+    if cfg[stack]['Parameters'].has_key('AMI') is False:
+        print "Ensure AMI is a Parameter as it is referenced below as Ref(AMI)"
+        raise Exception("Ensure AMI is a Parameter as it is referenced below as Ref(AMI)")
 
-ExternalSecurityGroup = template.add_parameter(Parameter(
-    "ExternalSecurityGroup",
-    Type="String",
-    Default=externalSecurityGroup,
-    Description="Security group to define user access to the stack.",
-))
+    # Create Subnet And AvailZones Lists
+    subnet_list=[]
+    az_list=[]
+    for az2sub in cfg[stack]['Region2AZSubnet']:
+        subnets=cfg[stack]['Region2AZSubnet'][az2sub]['Subnets']
+        az_list.append(cfg[stack]['Region2AZSubnet'][az2sub]['AZ'])
+        for subnet in subnets:
+            subnet_list.append(subnet)
 
-InstanceType = template.add_parameter(Parameter(
-    "InstanceType",
-    Type="String",
-    Default="t2.small",
-    Description="The EC2 instance type to launch.",
-))
+    baseElb = BaseELB(template, cfg[stack]['ELB']['Name'], mybranch, cfg[stack]['FriendlyName'],
+                      cfg[stack]['ExternalSecGrp'], subnet_list, cfg[stack]['ELB']['HealthCheck'],
+                      cfg[stack]['ELB'])
+    baseAsg = BaseAsg(template, mybranch, cfg[stack]['FriendlyName'], az_list, subnet_list, cfg[stack]['LaunchConfig']['Name'],
+                      cfg[stack]['ASG'],
+                      cfg[stack]['ELB']['Name'])
+    baseDns = BaseDNS(template, mybranch, cfg[stack]['FriendlyName'], cfg[stack]['LaunchConfig']['Name'],
+                      cfg[stack]['ELB']['Name'])
 
-SecurityGroup = template.add_parameter(Parameter(
-    "SecurityGroup",
-    Type="String",
-    Description="Security group for full stack.",
-))
-
-ServiceName = template.add_parameter(Parameter(
-    "ServiceName",
-    Type="String",
-    Default="app",
-    Description="The name of the service deployed into the container, as propagated to userdata.",
-))
-
-BranchName = template.add_parameter(Parameter(
-    "BranchName",
-    Type="String",
-    Default=mybranch,
-    Description="The name of the specific branch from the git repository for this service.",
-))
-
-ProjectBaseURL = template.add_parameter(Parameter(
-    "ProjectBaseURL",
-    Type="String",
-    Description="The base URL of the service being deployed.",
-))
-
-if mybranch is "master" or mybranch is "staging":
-    subnet=FindInMap( "Region2SubnetProd", Ref(Region), "Subnet" )
-    AZ=FindInMap( "Region2SubnetProd", Ref(Region), "AZ" )
-else:
-    subnet=FindInMap( "Region2SubnetDev", Ref(Region), "Subnet" )
-    AZ=FindInMap( "Region2SubnetDev", Ref(Region), "AZ" )
-
-enocElb=EnocELB(template, elbName, mybranch, friendlyName, externalSecurityGroup, subnet, elbHealthCheckConfig,
-                 elbListenerConfig, connectionDrainingPolicyTimeout=120)
-
-template=enocElb.getTemplate()
-
-LaunchConfig=template.add_resource(LaunchConfiguration(
-    launchConfigName,
-    ImageId=Ref(AMI),
-    InstanceType=Ref(InstanceType),
-    SecurityGroups=[Ref(SecurityGroup)],
-    UserData=Base64(Ref(ServiceName))
+    # TODO: Create Launch Config class if necessary
+    template.add_resource(LaunchConfiguration(
+        cfg[stack]['LaunchConfig']['Name'],
+        ImageId=Ref(cfg[stack]['Parameters']['AMI']['Name']),
+        InstanceType=cfg[stack]['LaunchConfig']['InstanceType'],
+        SecurityGroups=cfg[stack]['LaunchConfig']['SecurityGroups'],
+        UserData=Base64(cfg[stack]['LaunchConfig']['UserData'])
     )
-)
+    )
 
-enocAsg=EnocAsg(template, mybranch, friendlyName, AZ, subnet, launchConfigName, asgConfig, elbName)
-template=enocAsg.getTemplate()
+    template = baseAsg.getTemplate()
+    template = baseElb.getTemplate()
+    template = baseDns.getTemplate()
 
-enocDNS=EnocDNS(template, mybranch, friendlyName, launchConfigName, elbName)
-template=enocDNS.getTemplate()
-
-# TODO: Validate template by making sure it was valid json or compare it to last template and print changes to ensure
-print(template.to_json())
+    # TODO: Validate template by making sure it was valid json or compare it to last template and print changes, maybe???
+    print(template.to_json())
 
 
 class Test(unittest.TestCase):
-
-
     def setUp(self):
         pass
 
-
     def tearDown(self):
         pass
-
 
     def testName(self):
         pass
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
+    # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

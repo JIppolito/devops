@@ -17,7 +17,9 @@ import troposphere.elasticloadbalancing as elb
 
 class BaseELB(object):
     def __init__(self, template, elbname, branch, friendlyName, externalSecurityGroup, subnet, elbHealthCheckConfig,
-                 elbListenerConfig=None, connectionDrainingPolicyTimeout=60):
+                 elbListenerConfig=None):
+
+        # TODO: Add validation here to ensure it has valid params
         self.branch = branch
         self.template = template
         self.elbname=elbname
@@ -26,12 +28,13 @@ class BaseELB(object):
         self.subnet = subnet
         self.elbHealthCheckConfig = elbHealthCheckConfig
 
-        '''elbListenerConfig and sslCert can be null'''
+        '''elbListenerConfig can be null'''
         self.elbListenerConfig = elbListenerConfig
-        self.connectionDrainingPolicyTimeout = connectionDrainingPolicyTimeout
-        self.connectionDrainingPolicy = True
+        if self.elbListenerConfig.has_key('Timeout'):
+            self.connectionDrainingPolicyTimeout = self.elbListenerConfig['Timeout']
+            self.connectionDrainingPolicy = True
 
-        if connectionDrainingPolicyTimeout is None:
+        else:
             self.connectionDrainingPolicy = False
 
     def validateAsgHealthCheckConfig(self, asgHealthCheckConfig):
@@ -53,15 +56,14 @@ class BaseELB(object):
 
         if self.elbListenerConfig is not None:
             #elbListenerJson = simplejson.loads(simplejson.dumps(self.elbListenerConfig))
-            elbListenerJson=self.elbListenerConfig
-            if elbListenerJson.has_key('sslCert'):
-                return elb.Listener(LoadBalancerPort=elbListenerJson['LoadBalancerPort'],
-                                    InstancePort=elbListenerJson['InstancePort'], Protocol=elbListenerJson['Protocol'],
-                                    InstanceProtocol=elbListenerJson['InstanceProtocol'], SSLCertificateId=elbListenerJson['sslCert'])
+            if self.elbListenerConfig.has_key('SSLCert'):
+                return elb.Listener(LoadBalancerPort=self.elbListenerConfig['LoadBalancerPort'],
+                                    InstancePort=self.elbListenerConfig['InstancePort'], Protocol=self.elbListenerConfig['Protocol'],
+                                    InstanceProtocol=self.elbListenerConfig['InstanceProtocol'], SSLCertificateId=self.elbListenerConfig['SSLCert'])
             else:
-                return elb.Listener(LoadBalancerPort=elbListenerJson['LoadBalancerPort'],
-                                    InstancePort=elbListenerJson['InstancePort'], Protocol=elbListenerJson['Protocol'],
-                                    InstanceProtocol=elbListenerJson['InstanceProtocol'])
+                return elb.Listener(LoadBalancerPort=self.elbListenerConfig['LoadBalancerPort'],
+                                    InstancePort=self.elbListenerConfig['InstancePort'], Protocol=self.elbListenerConfig['Protocol'],
+                                    InstanceProtocol=self.elbListenerConfig['InstanceProtocol'])
 
         else:
             # Default ELB Listener
@@ -73,25 +75,24 @@ class BaseELB(object):
             return elb.Listener(LoadBalancerPort=loadBalancerPort, InstancePort=instancePort, Protocol=protocol, InstanceProtocol=instanceProtocol)
 
     def getTemplate(self):
-        elbHealthCheckJson = simplejson.loads(simplejson.dumps(self.elbHealthCheckConfig))
-
+        #elbHealthCheckJson = simplejson.loads(simplejson.dumps(self.elbHealthCheckConfig))
         self.template.add_resource(LoadBalancer(
             self.elbname,
             ConnectionDrainingPolicy=self.getConnectionDrainingPolicy(),
             Subnets=[self.subnet],
             HealthCheck=elb.HealthCheck(
-                Target=elbHealthCheckJson['Target'],
-                HealthyThreshold=elbHealthCheckJson['HealthyThreshold'],
-                UnhealthyThreshold=elbHealthCheckJson['UnhealthyThreshold'],
-                Interval=elbHealthCheckJson['Interval'],
-                Timeout=elbHealthCheckJson['Timeout'],
+                Target=self.elbHealthCheckConfig['Target'],
+                HealthyThreshold=self.elbHealthCheckConfig['HealthyThreshold'],
+                UnhealthyThreshold=self.elbHealthCheckConfig['UnhealthyThreshold'],
+                Interval=self.elbHealthCheckConfig['Interval'],
+                Timeout=self.elbHealthCheckConfig['Timeout'],
             ),
             Listeners=[
                 self.getELBListener(),
             ],
             Scheme="internal",
             SecurityGroups=[self.externalSecurityGroup],
-            LoadBalancerName=Join("_", [self.friendlyName, self.branch, "lb"]),
+            LoadBalancerName=Join("_", [ self.friendlyName, self.branch ] ),
             CrossZone=True,
         ))
 

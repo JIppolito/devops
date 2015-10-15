@@ -1,0 +1,83 @@
+Stack_1:
+    Name: MyApp
+    Branches: ["master", "staging"]
+    Service: MyService
+    FriendlyName: myservice
+    ExternalSecGrp: sg-12345678
+    Region: us-east-1b
+    Parameters:
+        AMI:
+            Name: AMI
+            Default: ami-12345678
+            Type: String
+            Description: "Image generated for this build"
+        GITCOMMIT:
+            Name: GITCOMMIT
+            Default: "1"
+            Type: String
+            Description: "The revision number of the sub stack template uploaded to S3"
+        GITBRANCH:
+            Name: GITBRANCH
+            Default: dev
+            Type: String
+            Description: "The revision number of the sub stack template uploaded to S3."
+        Region:
+            Name: Region
+            Default: us-east-1b
+            Type: String
+            Description: "Default Region to deploy into"
+
+    LaunchConfig:
+        Name: LaunchConfig
+        InstanceType: t2.small
+        SecurityGroups:
+            -   sg-12345678
+        UserData: interconnect
+
+    ELB:
+        Name: myservicelb
+        LoadBalancerPort: 443
+        InstancePort: 8888
+        Protocol: HTTPS
+        InstanceProtocol: HTTP
+        SSLCert: arn:aws:iam::123465789:server-certificate/.myurl.company.com
+        Timeout: 60
+        HealthCheck:
+            Target: TCP:8888/
+            HealthyThreshold: 5
+            UnhealthyThreshold: 2
+            Interval: 20
+            Timeout: 15
+
+    ASG:
+        Name: myserviceasg
+        MinSize: 1
+        MaxSize: 1
+        DesiredCapactiy: 1
+        HealthCheckGracePeriod: 180
+        MaxBatchSize: 1
+        MinInstancesInService: 0
+        PauseTime: PT0S
+        WaitOnResourceSignals: False
+
+    Region2AZSubnet:
+        AZ2Sub1:
+            AZ: us-east-1b
+            Subnets: [ subnet-12345678 ]
+        AZ2Sub2:
+            AZ: us-east-1c
+            Subnets: [ subnet-23456789 ]
+        AZ2Sub3:
+            AZ: us-east-1d
+            Subnets: [ subnet-34567892 ]
+
+
+
+    # TODO: Create DNS Entry config as there may be more than one for a single stack (external facing dns and internal ?)
+    # TODO: Currently there is no DNSConfig that is passed to enoc_dns.py
+    DNSConfig:
+        DNSEntry_1:
+            HostedZoneName: mygroup.company.com
+            RecordSets:
+                RecordSet:
+                    Type: A

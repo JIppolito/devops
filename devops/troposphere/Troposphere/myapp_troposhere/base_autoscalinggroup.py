@@ -15,18 +15,26 @@ import troposphere.ec2 as ec2
 import troposphere.elasticloadbalancing as elb
 
 class BaseAsg(object):
-    def __init__(self, template, branch, friendlyName, availZone, subnet, launchConfigName, asgConfig, elb=None ):
+    def __init__(self, template, branch, friendlyName, availZones, subnet, launchConfigName, asgConfig, elb=None ):
+
+        # TODO: Add validation here to ensure it has valid params
         self.template=template
         self.branch = branch
         self.template = template
         self.friendlyName = friendlyName
-        self.availZone = availZone
+        self.availZone = availZones
         self.subnet = subnet
         self.launchConfigName=launchConfigName
         self.asgConfig = asgConfig
 
         ''' can be null '''
         self.elb = elb
+
+    def validateASGConfig(self):
+        pass
+
+    def validateELBConfig(self):
+        pass
 
     def getTemplate(self):
         #asgConfigJson = simplejson.loads(simplejson.dumps(self.asgConfig))
