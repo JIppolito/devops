@@ -4,7 +4,7 @@
    
       <f:section title="Kitchen Send Single Build Instance Options">
       
-            <f:entry title="Kitchen Url"><f:textbox field="kitchenURL" default="http://kitchen.devops.enernoc.net"></f:textbox></f:entry>
+            <f:entry title="Kitchen Url"><f:textbox field="kitchenURL" default="http://kitchen.devops.company.net"></f:textbox></f:entry>
             
             <f:entry title="Role"><f:textbox field="role" default="ids-api"></f:textbox></f:entry>
             

@@ -4,7 +4,7 @@
    
       <f:section title="Kitchen Send Full Stack Instance Options">
       
-            <f:entry title="Kitchen Url"><f:textbox field="kitchenURL" default="http://kitchen.devops.enernoc.net"></f:textbox></f:entry>
+            <f:entry title="Kitchen Url"><f:textbox field="kitchenURL" default="http://kitchen.devops.company.net"></f:textbox></f:entry>
             <f:entry title="Stack Type"><f:textbox field="stack_type" default="bdap"></f:textbox></f:entry>            
             
             <f:entry title="Branch"><f:textbox field="branch" default="master"></f:textbox></f:entry>
