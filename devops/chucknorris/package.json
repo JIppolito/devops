@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "irc": "~0.3.6",
+    "async": "~0.2.9"
+  },
+  "name": "ircbot",
+  "version": "0.0.0",
+  "description": "Tsung bot to chat latest Tsung URL and a Chuck Norris Quote",
+  "main": "norris.js",
+  "author": "Jeff Ippolito",
+  "license": "MIT"
+}
