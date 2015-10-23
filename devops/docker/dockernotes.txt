@@ -1,0 +1,54 @@
+Look into enernoclabs/oracel-node:v4.
+Look to create a base image for ENG?
+
+Volumes mounting For dev only, not in Dockerfile. Create volumes that have the source code so that you can make source code changes 
+and it results in changes being made to the ECS container directly.
+
+Docker-machine doesnt forward the hosts from docker compose to ECS hence why you have to run the eval command (i.e. eval "$(dm env alc)")
+
+Rakefile:
+Forward hosts for VM from Docker YML for ports etc.
+Rakefile is mostly used for an alias for big docker-compose commands
+
+/src/lcds
+Need to have package.json with dependencies in src though
+So dockerfile puts package.json in src
+/src/package.json
+
+But /src/lcds is going to get blown away on mounting volume so it creates 
+/src/node_modules
+
+index.js:
+Secrets are not stored in git but the configuration is. Secrets.yml is in S3.
+
+ECS:
+Task Definitions:  ECS Config -> Translates the docker-compose.yml to a task
+	alc-labs-staging
+		v1 -> has both Dockhub Image and ECS Configs
+			- Ports
+			- Env
+			- Command to start
+		v2 -> Versions every time you build
+			- Ports
+			- Env
+			- Command to start
+
+	Clusters: group of services
+		alc-staging-cluster:  Services define how many instances, load balancers, task definition and version
+		- ccds  
+		- lcbs
+		- ui
+		EC2 Instances
+
+Jenkins Deployment Script:
+Checkout project you want to deploy
+Git checkout the deploy script
+Parses Docker-compose.yml (prod)
+Downloads from S3 the secret file
+Converts docker-compose.yml to ECS Config
+Insert Secrets into ECS Config
+Docker build for each service layer 
+Pushes to dockerhub
+Returns from dockerhub the Version Tag which is pushed to ECS Config
+AWS ECS Update Task Definition
+

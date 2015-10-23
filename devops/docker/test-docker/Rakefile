@@ -1,0 +1,95 @@
+# Logic for host scripts
+# Try to avoid any non-standard libraries.  Don't want to have a Gemfile unless
+# we have to.
+require 'pty'
+require 'yaml'
+require 'json'
+
+require './_ops/deploy'
+
+DCY = YAML.load_file('docker-compose.yml')
+PRD_DCY = YAML.load_file('docker-compose-prd.yml')
+LAYERS = DCY.keys.select { |k| DCY[k]['command'] }
+
+def exec(cmd)
+    PTY.spawn(cmd) do |stdout, stdin, pid|
+        begin
+            stdout.each { |line| print line }
+            rescue Errno::EIO
+        ensure
+            Process.wait(pid)
+            if $? && $?.exitstatus != 0
+                puts ("Failed with exit " + $?.exitstatus.to_s).red
+                exit $?.exitstatus
+            end
+        end
+    end
+end
+
+
+def test(layer)
+  exec("docker-compose run -e NODE_ENV=test #{layer} node_modules/.bin/grunt test")
+end
+
+LAYERS.each do |layer|
+  namespace layer do
+    task :test do
+      test(layer)
+    end
+  end
+end
+
+task :test do
+  LAYERS.each { |layer|
+    puts "\nTesting #{layer} ...".white
+    test(layer)
+  }
+end
+
+task :build do
+  puts "\nBuilding layers...".white
+  exec("docker-compose build --no-cache")
+end
+
+
+task :clean do
+  puts "\nCleaning docker fragments...".white
+  # Clean up containers
+  exec("docker rm -f `docker ps --no-trunc -aq` || true")
+  # Clean up container cache images
+  exec("docker images --no-trunc | grep none | awk '{print $3}' | xargs -r docker rmi")
+end
+
+
+task :setupVM do
+  puts "Stopping 'demandmgt' VM ...".white
+  `docker-machine stop demandmgt`
+
+  puts "Forwarding ports ...".white
+  DCY.keys.each { |k|
+    ports = DCY[k]['ports'] || []
+
+    # Merge production YAML to make sure we have all the ports for the layer
+    if PRD_DCY[k]
+      ports.concat(PRD_DCY[k]['ports'] || [])
+    end
+
+    # Set up port forwarding through the VBox machine
+    ports.each { |p|
+      host, guest = p.split(':')
+      puts "Forwarding guest port #{guest} to #{host}"
+      `VBoxManage modifyvm "demandmgt" --natpf1 "#{k}_#{host},tcp,127.0.0.1,#{host},,#{guest}"`
+    }
+  }
+  exec("docker-machine start demandmgt")
+end
+
+
+# The deploy task definitions
+DEPLOY_CONF.keys.each do |env|
+    namespace env do
+        task :deploy do
+            deploy(env)
+        end
+    end
+end

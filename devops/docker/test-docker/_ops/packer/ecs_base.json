@@ -1,0 +1,33 @@
+{
+  "variables": {
+    "splunk_user": "{{env `SPLUNK_USER`}}",
+    "splunk_pass": "{{env `SPLUNK_PASS`}}"
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "region": "us-east-1",
+      "vpc_id": "vpc-1”,
+      "subnet_id": "subnet-a”,
+      "source_ami": "ami-d”,
+      "instance_type": "m3.medium",
+      "ssh_username": "ubuntu",
+      "ami_name": “myapp-baseECS-{{timestamp}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "_ops/packer/templates",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "script": "_ops/packer/scripts/provision.sh",
+      "environment_vars": [
+        "SPLUNK_USER={{user `splunk_user`}}",
+        "SPLUNK_PASS={{user `splunk_pass`}}"
+      ]
+    }
+  ]
+}

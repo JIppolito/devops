@@ -1,0 +1,10 @@
+myservice:
+  build: ./myservice
+  working_dir: /src/
+  command: "/etc/init.d/jboss restart"
+  ports:
+    - "8080:8080"
+  volumes:
+   - "/var/log/myservice:/var/log/myservice"
+
+    
