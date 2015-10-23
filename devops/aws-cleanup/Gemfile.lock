@@ -1,5 +1,5 @@
 GEM
-  remote: http://artifactory.enoc.cc/artifactory/api/gems/rubygems/
+  remote: https://rubygems.org
   specs:
     aws-sdk (2.1.7)
       aws-sdk-resources (= 2.1.7)

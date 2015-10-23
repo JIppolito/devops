@@ -1,3 +1,2 @@
-source 'http://artifactory.enoc.cc/artifactory/api/gems/rubygems/'
-
+source 'https://rubygems.org'
 gem 'aws-sdk', '2.1.7'
