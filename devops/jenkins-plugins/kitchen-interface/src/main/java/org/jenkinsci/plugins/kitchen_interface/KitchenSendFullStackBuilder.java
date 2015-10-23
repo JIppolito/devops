@@ -402,7 +402,7 @@ public class KitchenSendFullStackBuilder extends Builder {
     	
 	}
   
-    //Method for DNS Entries: curl -H Accept:application/json http://kitchen.devops.enernoc.net/dns_entries?id=53b428cc09228dcf65000008&type=group
+    //Method for DNS Entries: curl -H Accept:application/json http://localhost/dns_entries?id=53b428cc09228dcf65000008&type=group
     public HashMap<String, Object> sendKitchenDNSEntriesRequest(String kitchenId, String type, BuildListener listener) throws Exception {
     	//{"request_type":"group","request_id":"53b15ef42b8ff4db1b000125","dns_entries":{"api":"internal-api-stg-3Q336O6RR-453620033.us-east-1.elb.amazonaws.com","dmgt-service":"internal-dmgt-service-stg-V4DAUP4F1-133830845.us-east-1.elb.amazonaws.com"}}
     	JSONObject o;
@@ -426,7 +426,7 @@ public class KitchenSendFullStackBuilder extends Builder {
     	return map;
     }	
 	
-    //Method for ip_addresses: curl -H Accept:application/json http://kitchen.devops.enernoc.net/ip_addresses?id=53b428cc09228dcf65000008&type=group
+    //Method for ip_addresses: curl -H Accept:application/json http://localhost/ip_addresses?id=53b428cc09228dcf65000008&type=group
     public String sendKitchenIpRequest(String kitchenId, String type, BuildListener listener) throws IOException {
     	JSONObject o;
         String it = new String();

@@ -375,7 +375,7 @@ public class KitchenStatusBuilder extends Builder {
 	}
 	
     
-    //Method for ip_addresses: curl -H Accept:application/json http://kitchen.devops.enernoc.net/ip_addresses?id=5392211609228d4d9500000b&type=group
+    //Method for ip_addresses: curl -H Accept:application/json http://localhost/ip_addresses?id=5392211609228d4d9500000b&type=group
     public String sendKitchenIpRequest(String kitchenId, String type, BuildListener listener) throws IOException {
     	JSONObject o;
         String it = new String();

@@ -1,5 +1,5 @@
 FROM ubuntu:14.04
-MAINTAINER Jeff Ippolito <jippolito@enernoc.com>
+MAINTAINER Jeff Ippolito <jeff.ippolito@gmail.com>
 
 # Install packages from apt-get
 RUN apt-get update && apt-get install -y \
