@@ -41,7 +41,7 @@ FROM java:8
 FROM jboss/wildfly
 USER jboss
 ADD standalone.xml /opt/wildfly/standalone/configuration/standalone.xml
-ADD demandmgt-urls.properties /opt/enernoc/resource/demandmgt-urls.properties
+ADD demandmgt-urls.properties /opt/myapp/resource/demandmgt-urls.properties
 ADD demandmanagement-webapp-1.9.6-master.war /opt/jboss/wildfly/standalone/deployments/
 RUN /opt/jboss/wildfly/bin/add-user.sh admin Admin#70365 --silent
 
@@ -49,9 +49,9 @@ RUN /opt/jboss/wildfly/bin/add-user.sh admin Admin#70365 --silent
 # This will boot WildFly in the standalone mode and bind to all interface
 
 # TODO: I need to override the Spring Profile below via docker-compose??
-# /bin/sh /usr/local/jboss/default/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0 -# Ddemandmgt.URLsPropertyFile=file:///opt/enernoc/resource/demandmgt-urls.properties -Dspring.profiles.active=dev
+# /bin/sh /usr/local/jboss/default/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0 -# Ddemandmgt.URLsPropertyFile=file:///opt/myapp/resource/demandmgt-urls.properties -Dspring.profiles.active=dev
   
-CMD ["/opt/jboss/wildfly/bin/standalone.sh", "-b", "0.0.0.0", "-bmanagement", "0.0.0.0", "-Ddemandmgt.URLsPropertyFile", "file:///opt/enernoc/resource/demandmgt-urls.properties", "-Dspring.profiles.active", "dev"]
+CMD ["/opt/jboss/wildfly/bin/standalone.sh", "-b", "0.0.0.0", "-bmanagement", "0.0.0.0", "-Ddemandmgt.URLsPropertyFile", "file:///opt/myapp/resource/demandmgt-urls.properties", "-Dspring.profiles.active", "dev"]
 
 
 

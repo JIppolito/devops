@@ -1,2 +1,0 @@
-#Thu Mar 05 15:13:35 EST 2015
-constructor=kitchenURL,role,branch,ami,bootstrap,subnet,type,security,chef_environment,cloud_tag_single,avail_Zones,max_timeout,socketTimeout,connectTimeout,connectionRequestTimeout,staleConnectionCheckEnabled

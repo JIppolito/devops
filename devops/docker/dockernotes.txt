@@ -51,3 +51,33 @@ Pushes to dockerhub
 Returns from dockerhub the Version Tag which is pushed to ECS Config
 AWS ECS Update Task Definition
 
+
+Secret File:
+ 3
+down vote
+accepted
+	
+
+The solution I settled on was the following: save the environment variables in a secret file and pass those on to the container using fig.
+
+    have a secret_env file with secret info, e.g.
+
+    export GEO_BING_SERVICE_KEY='98hfaidfaf'
+    export JIRA_PASSWORD='asdf8jriadf9'
+
+    have secret_env in my .gitignore
+
+    have a secret_env.template file for developers, e.g.
+
+    export GEO_BING_SERVICE_KEY=''  # can leave empty if you wish
+    export JIRA_PASSWORD=''  # write your pass
+
+    in my fig.yml I send the variables through:
+
+    environment:
+     - GEO_BING_SERVICE_KEY
+     - JIRA_PASSWORD
+
+    call source secret_env before building
+
+
