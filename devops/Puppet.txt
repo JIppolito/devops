@@ -1,0 +1,60 @@
+Puppet:
+
+modules:
+Install modules from Puppet Forge
+Installed modules are found in the modulepath: /etc/puppetlabs/code/environments/production/modules.
+(Modules are synonymous with cookbooks in Chef)
+
+Node groups:
+Nodes are individual instances or servers that the Puppet agent runs on.  It can automatically query for updates from
+the Catalog in Puppet Master.
+
+Puppet Master:
+This is where all the puppet code lives (i.e. chef server)
+
+Puppet Agent:
+Agent that runs on an individual instance/server.
+puppet agent --mytest
+
+Resources:
+
+Resource Abstraction Layer (RAL)
+-users, files, services, packages are Resource Units
+
+Puppet's Domain Specific Language (DSL)
+-A block of code that describes a resource declaration is written the Puppet DSL.
+-Puppet DSL is declarative and only describe the desired end state. Providers will handle the implementation.
+-Puppet can inspect the current state of any existing resource in the same syntax you would declare the state (unlike
+chef which has the issue when it converges, the state cannot always be inspected).
+
+Built-in Resource Types:
+>puppet describe --list
+i.e.
+-user A user
+-group A user group
+-file A specific file
+-package A software package
+You can get a list of parameters from any resource:
+>puppet describe user | less
+
+Resources are defined as list of Hashes (hence the =>)
+type {'title':
+    attribute => 'value',
+}
+
+
+Puppet Apply tool
+>puppet apply -e
+The -e flag will limit the apply to one-off changes.
+i.e.
+puppet apply -e "user { 'galatea': ensure => present, }"
+
+Edit a Specific Resource:
+puppet resource -e myresource
+>puppet resource -e user galatea
+
+
+
+
+
+
