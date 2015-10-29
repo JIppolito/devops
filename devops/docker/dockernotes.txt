@@ -53,9 +53,6 @@ AWS ECS Update Task Definition
 
 
 Secret File:
- 3
-down vote
-accepted
 	
 
 The solution I settled on was the following: save the environment variables in a secret file and pass those on to the container using fig.
@@ -79,5 +76,8 @@ The solution I settled on was the following: save the environment variables in a
      - JIRA_PASSWORD
 
     call source secret_env before building
+
+
+https://hub.docker.com/r/enernoclabs/avahi/
 
 
