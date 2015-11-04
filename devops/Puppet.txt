@@ -42,6 +42,20 @@ type {'title':
     attribute => 'value',
 }
 
+>puppet resource <type> <name>
+
+Common Resource Types:
+
+    user: A user
+    group: A user group
+    file: A specific file
+    package: A software package
+    service: A running service
+    cron: A scheduled cron job
+    exec: An external command
+    host: A host entry
+
+
 
 Puppet Apply tool
 >puppet apply -e
@@ -54,7 +68,107 @@ puppet resource -e myresource
 >puppet resource -e user galatea
 
 
+Manifests and Classes:
+######################
+
+Manifests are puppet code saved to a *.pp file.  Classes are often saved to a
+manifest file and referenced later.
+
+## Puppet Classes:
+
+Step 1: Define the class and to a manifest file.
+Step 2: Declare the class to apply resource declarations the class contains to a node.
+
+Classes vs Defined Types
+########################
+
+Puppet classes are SINGLETONS as they can only be declared once per node.  Classes defines a particular class of machine.  Defined Types can have many instances on a machine and can encapsulate classes and other resources. So defined type add_user can be called multiple times but the add.pp class can only be refernced once.
+
+i.e.
+Defined type in <modulepapath>/manifests/add_user.pp:
+define add_user ( $username, $comment, $home, $shell, $uid, $gid, $password)
+    {
 
 
+    # Create the user. This is where most of the magic happens.
+    username { "$username":
+    name => "$username",
+    ensure => present,
+    comment => "$comment",
+    home => "$home",
+    shell => "$shell",
+    uid => "$uid",
+    password => "$password",
+    gid => "$gid"
+    }
 
 
+Class Users in <modulepapath>/users/manifests/add.pp:
+class users::add( $u_name, $u_comment, $u_home, $u_shell, $u_uid, $u_gid, $u_password)
+{
+  users::add_user{ $u_name:
+    $username => $u_name, 
+    $comment  => $u_comment, 
+    $home     => $u_home, 
+    $shell    => $u_shell, 
+    $uid      => $u_uid, 
+    $gid      => $u_gid, 
+    $password => $u_password,
+  }
+
+  files { .... }
+}
+
+Call the class in site.pp:
+import "classes/*.pp"
+    node default{
+      class { 'add_user': 
+        username => "saga",
+        comment => "Arun Sag",
+        gid => "100",
+        home => "/home/saga",
+        password => '$1$passwordhash/',
+        shell => "/bin/bash",
+        uid => "70960",
+      }
+    }
+Create a Class:
+###############
+
+Step 1:
+Define classes in manifests directory: myclasses/manifests/cowsay.pp
+class cowsayings::cowsay {
+  package { 'cowsay':
+    ensure => present,
+    provider => 'gem',
+  }
+}
+
+Step 2:
+Then declare them in the app to be used myapp/cowsay.pp
+include cowsayings::cowsay
+
+Note:
+cowsayings:: is the module where the classes are defined.
+
+## Wrapper Classes: Classes to define multiple classes:
+
+class lamp {
+  include apache::server
+  include puppetlabs::php
+  include mysql::server
+}
+
+
+Modules
+#######
+
+Find the modulepath (typically /opt/puppetlabs/puppet/modules)
+
+
+Files are referenced: puppet://{server hostname (optional)}/{mount point}/{remainder of path}
+The hostname is usually implied as its the puppet master server. The path defaults to the modulepath. And the files directory is implicit so '/modules/vimrc/files/vimrc' is then just '/modules/vimrc/vimrc':
+source => 'puppet:///modules/vimrc/vimrc',
+
+NTP:
+####
