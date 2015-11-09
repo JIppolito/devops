@@ -57,15 +57,31 @@ Common Resource Types:
 
 
 
-Puppet Apply tool
+Puppet Apply:
+#############
+
+Puppet apply manages systems without needing to contact a Puppet master server. It compiles its own configuration catalog, using Puppet modules and various other data sources, then immediately applies the catalog.
+
 >puppet apply -e
 The -e flag will limit the apply to one-off changes.
 i.e.
 puppet apply -e "user { 'galatea': ensure => present, }"
 
+Noop:
+Noop command allows you to do a dry run before actually applying the changes:
+puppet apply --noop cowsayings/examples/cowsay.pp
+
 Edit a Specific Resource:
 puppet resource -e myresource
 >puppet resource -e user galatea
+
+Puppet Agent:
+#############
+
+
+Puppet agent manages systems, with the help of a Puppet master. It requests a configuration catalog from a Puppet master server, then ensures that all resources in that catalog are in their desired state
+
+>puppet agent -t
 
 
 Manifests and Classes:
@@ -170,5 +186,49 @@ Files are referenced: puppet://{server hostname (optional)}/{mount point}/{remai
 The hostname is usually implied as its the puppet master server. The path defaults to the modulepath. And the files directory is implicit so '/modules/vimrc/files/vimrc' is then just '/modules/vimrc/vimrc':
 source => 'puppet:///modules/vimrc/vimrc',
 
-NTP:
-####
+Scope:
+######
+
+node 'learning.puppetlabs.vm' {
+  class { '::mysql::server':
+    root_password    => 'strongpassword',
+    override_options => {
+      'mysqld' => { 'max_connections' => '1024' }
+    },
+  }
+}
+
+Puppet will look for server.pp in the scope 'mysql::server' at top level of the mysql/manifests directory. So mysql::server corresponds to:
+
+/etc/puppetlabs/code/environments/production/modules/mysql/manifests/server.pp
+
+If no parameters need to be set or overriden then you can just call the class:
+node 'learning.puppetlabs.vm' {
+  include ::mysql::server::account_security
+  ...
+}
+
+
+Types and Providers:
+####################
+
+Types:
+A type defines the interface for a resource: the set of properties you can use to define a desired state for the resource, and the parameters that don't directly map to things on the system, but tell Puppet how to manage the resource. Both properties and parameters appear in the resource declaration syntax as attribute value pairs.
+file is the type
+the path, owner, group and mode represent the Attributes, Parameters, Properties.
+i.e.
+file { '/etc/passwd':
+  owner => root,
+  group => root,
+  mode  => 644
+}
+
+Providers:
+Providers implement the same resource type on different kinds of systems. They usually do this by calling out to external commands.
+i.e.
+provider 'exec'' can call out to posix, shell, and windows depending on the platform
+
+Variables and Parameters:
+#########################
+
+
