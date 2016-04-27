@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-#ran successfully on the command line:  ./getStackStatus.sh -n stampede-dummy -a AKIAJYHU3C7W3Q5ESBTA -s aqdV4NLpJ+4gEorxRgRYUm5fjsQjcNu5wzfi5te+
+#ran successfully on the command line:  ./getStackStatus.sh -n stampede-dummy -a myawsaccesskey -s myawssecretkey
 
 # Usage info
 show_help() {
